@@ -2,6 +2,10 @@ package main
 
 import "database/sql"
 
+type App struct {
+	DB *Database
+}
+
 type Database struct {
 	conn *sql.DB
 }

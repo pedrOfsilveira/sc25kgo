@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"net/http"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -16,6 +17,10 @@ func main() {
 
 	db := &Database{
 		conn: conn,
+	}
+
+	app := &App{
+		DB: db,
 	}
 
 	err = db.CreateTables()
@@ -69,4 +74,9 @@ func main() {
 	// }
 
 	// log.Println(cycles)
+
+	err = http.ListenAndServe(":8080", app.Routes())
+	if err != nil {
+		log.Fatal(err)
+	}
 }
