@@ -88,3 +88,12 @@ func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 		"photoURL":     photoURL,
 	})
 }
+
+func (app *App) GetCompletedStagesHandler(w http.ResponseWriter, r *http.Request) {
+	stages, err := app.DB.GetCompletedStages()
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to get completed stages")
+		return
+	}
+	respondJSON(w, http.StatusOK, stages)
+}
