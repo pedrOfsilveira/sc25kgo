@@ -36,6 +36,15 @@ type StageCycle struct {
 	CycleOrder int
 }
 
+func NewStageCycle(stageID int, cycleType string, duration, cycleOrder int) (StageCycle, error) {
+	return StageCycle{
+		StageID:    stageID,
+		Type:       cycleType,
+		Duration:   duration,
+		CycleOrder: cycleOrder,
+	}, nil
+}
+
 type Completion struct {
 	ID           int
 	UserID       int
