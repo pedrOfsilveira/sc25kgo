@@ -79,4 +79,38 @@ func (db *Database) getStages() ([]Stage, error) {
 
 	return stages, nil
 }
-	
+
+func (db *Database) createStage(s Stage) error {
+	_, err := db.conn.Exec(`
+		INSERT INTO stages(week, day, name)
+		VALUES (?, ?, ?)
+		`,
+		s.Week, s.Day, s.Name,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return err
+}
+
+func (db *Database) getStage(id int) (Stage, error) {
+	row := db.conn.QueryRow(`
+	SELECT id, week, day, name
+	FROM stages
+	WHERE id = ?
+	`, id)
+
+	var stage Stage
+	err := row.Scan(
+		&stage.ID,
+		&stage.Week,
+		&stage.Day,
+		&stage.Name,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return stage, err
+}

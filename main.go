@@ -24,4 +24,23 @@ func main() {
 	}
 
 	log.Println("database is ready")
+
+	// stage, err := NewStage(1, 1, "Week 1 Day 1")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// err = db.createStage(stage)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// stages, err := db.getStages()
+	// log.Println(stages)
+
+	// stage, err := db.getStage(1)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Println(stage)
 }
