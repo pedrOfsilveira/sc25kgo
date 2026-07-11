@@ -62,4 +62,11 @@ func main() {
 	// }
 
 	// log.Println(completedStages)
+
+	// cycles, err := db.getCyclesByStageID(1)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// log.Println(cycles)
 }
