@@ -205,3 +205,60 @@ func (db *Database) GetCyclesByStageID(id int) ([]StageCycle, error) {
 	}
 	return cycles, err
 }
+
+func (db *Database) CreateUser(user User) error {
+	_, err := db.conn.Exec(`
+	INSERT INTO users(name, points)
+	VALUES (?, ?)`, user.Name, user.Points)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return err
+}
+
+func (db *Database) GetUsers() ([]User, error) {
+	rows, err := db.conn.Query(`
+	SELECT id, name, points
+	FROM users`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var users []User
+
+	for rows.Next() {
+		var user User
+		rows.Scan(
+			&user.ID,
+			&user.Name,
+			&user.Points,
+		)
+
+		users = append(users, user)
+	}
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return users, err
+}
+
+func (db *Database) GetUser(id int) (User, error) {
+	row := db.conn.QueryRow(`
+	SELECT id, name, points
+	FROM users
+	WHERE id = ?`, id)
+
+	var user User
+
+	err := row.Scan(
+		&user.ID,
+		&user.Name,
+		&user.Points,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return user, err
+}

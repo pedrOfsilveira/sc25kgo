@@ -16,6 +16,13 @@ type User struct {
 	Points int
 }
 
+func NewUser(name string) (User, error) {
+	return User{
+		Name:   name,
+		Points: 0,
+	}, nil
+}
+
 type Stage struct {
 	ID     int
 	Week   int

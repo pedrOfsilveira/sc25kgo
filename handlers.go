@@ -97,3 +97,29 @@ func (app *App) GetCompletedStagesHandler(w http.ResponseWriter, r *http.Request
 	}
 	respondJSON(w, http.StatusOK, stages)
 }
+
+func (app *App) GetUsersHandler(w http.ResponseWriter, r *http.Request) {
+	users, err := app.DB.GetUsers()
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to get users")
+		return
+	}
+	respondJSON(w, http.StatusOK, users)
+}
+
+func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "invalid id")
+		return
+	}
+
+	user, err := app.DB.GetUser(id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to get user")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, user)
+}
