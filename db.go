@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -37,14 +35,13 @@ func (db *Database) CreateTables() error {
 			stage_id INTEGER NOT NULL,
 			photo_url TEXT NOT NULL,
 			points_earned INTEGER NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(user_id) REFERENCES users(id),
+			FOREIGN KEY(stage_id) REFERENCES stages(id)
 		);
 	`
 
 	_, err := db.conn.Exec(sqlstmt)
-	if err != nil {
-		log.Fatal(err)
-	}
 	return err
 }
 
@@ -53,7 +50,7 @@ func (db *Database) GetStages() ([]Stage, error) {
 
 	rows, err := db.conn.Query(sqlstmt)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -68,13 +65,13 @@ func (db *Database) GetStages() ([]Stage, error) {
 			&stage.Name,
 		)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		stages = append(stages, stage)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	return stages, nil
@@ -87,10 +84,6 @@ func (db *Database) CreateStage(s Stage) error {
 		`,
 		s.Week, s.Day, s.Name,
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return err
 }
 
@@ -109,17 +102,17 @@ func (db *Database) GetStage(id int) (Stage, error) {
 		&stage.Name,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return Stage{}, err
 	}
 
 	cycles, err := db.GetCyclesByStageID(stage.ID)
 	if err != nil {
-		log.Fatal(err)
+		return Stage{}, err
 	}
 
 	stage.Cycles = cycles
 
-	return stage, err
+	return stage, nil
 }
 
 func (db *Database) CompleteStage(c Completion) error {
@@ -131,10 +124,6 @@ func (db *Database) CompleteStage(c Completion) error {
 		c.PhotoURL,
 		c.PointsEarned,
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return err
 }
 
@@ -149,7 +138,7 @@ func (db *Database) GetCompletedStages() ([]Stage, error) {
     JOIN run_completions
     ON run_completions.stage_id = stages.id;`)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -157,17 +146,20 @@ func (db *Database) GetCompletedStages() ([]Stage, error) {
 	for rows.Next() {
 		var stage Stage
 
-		rows.Scan(
+		err := rows.Scan(
 			&stage.ID,
 			&stage.Week,
 			&stage.Day,
 			&stage.Name,
 		)
+		if err != nil {
+			return nil, err
+		}
 
 		stages = append(stages, stage)
 	}
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	return stages, nil
 }
@@ -178,12 +170,13 @@ func (db *Database) GetCyclesByStageID(id int) ([]StageCycle, error) {
 		id,
 		stage_id,
 		type,
-		duration
+		duration,
+		cycle_order
 	FROM stage_cycles
 	WHERE stage_id = ?
 	ORDER BY cycle_order;`, id)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -191,29 +184,29 @@ func (db *Database) GetCyclesByStageID(id int) ([]StageCycle, error) {
 	for rows.Next() {
 		var cycle StageCycle
 
-		rows.Scan(
+		err := rows.Scan(
 			&cycle.ID,
 			&cycle.StageID,
 			&cycle.Type,
 			&cycle.Duration,
+			&cycle.CycleOrder,
 		)
+		if err != nil {
+			return nil, err
+		}
 
 		cycles = append(cycles, cycle)
 	}
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return cycles, err
+	return cycles, nil
 }
 
 func (db *Database) CreateUser(user User) error {
 	_, err := db.conn.Exec(`
 	INSERT INTO users(name, points)
 	VALUES (?, ?)`, user.Name, user.Points)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return err
 }
 
@@ -222,7 +215,7 @@ func (db *Database) GetUsers() ([]User, error) {
 	SELECT id, name, points
 	FROM users`)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -230,18 +223,21 @@ func (db *Database) GetUsers() ([]User, error) {
 
 	for rows.Next() {
 		var user User
-		rows.Scan(
+		err := rows.Scan(
 			&user.ID,
 			&user.Name,
 			&user.Points,
 		)
+		if err != nil {
+			return nil, err
+		}
 
 		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return users, err
+	return users, nil
 }
 
 func (db *Database) GetUser(id int) (User, error) {
@@ -258,7 +254,7 @@ func (db *Database) GetUser(id int) (User, error) {
 		&user.Points,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return User{}, err
 	}
-	return user, err
+	return user, nil
 }
