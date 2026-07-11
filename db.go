@@ -112,6 +112,13 @@ func (db *Database) getStage(id int) (Stage, error) {
 		log.Fatal(err)
 	}
 
+	cycles, err := db.getCyclesByStageID(stage.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stage.Cycles = cycles
+
 	return stage, err
 }
 
