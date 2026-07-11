@@ -18,7 +18,7 @@ func main() {
 		conn: conn,
 	}
 
-	err = db.createTables()
+	err = db.CreateTables()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,15 +30,15 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
-	// err = db.createStage(stage)
+	// err = db.CreateStage(stage)
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
 
-	// stages, err := db.getStages()
+	// stages, err := db.GetStages()
 	// log.Println(stages)
 
-	// stage, err := db.getStage(1)
+	// stage, err := db.GetStage(1)
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
@@ -49,21 +49,21 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
-	// err = db.completeStage(completion)
+	// err = db.CompleteStage(completion)
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
 
 	// log.Println(completion)
 
-	// completedStages, err := db.getCompletedStages()
+	// completedStages, err := db.GetCompletedStages()
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
 
 	// log.Println(completedStages)
 
-	// cycles, err := db.getCyclesByStageID(1)
+	// cycles, err := db.GetCyclesByStageID(1)
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }

@@ -53,7 +53,7 @@ type Completion struct {
 	PointsEarned int
 }
 
-func newCompletion(userID, stageID, pointsEarned int, photoURL string) (Completion, error) {
+func NewCompletion(userID, stageID, pointsEarned int, photoURL string) (Completion, error) {
 	return Completion{
 		UserID:       userID,
 		StageID:      stageID,

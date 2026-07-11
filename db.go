@@ -6,7 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func (db *Database) createTables() error {
+func (db *Database) CreateTables() error {
 	sqlstmt := `
 	CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +48,7 @@ func (db *Database) createTables() error {
 	return err
 }
 
-func (db *Database) getStages() ([]Stage, error) {
+func (db *Database) GetStages() ([]Stage, error) {
 	sqlstmt := `SELECT id, week, day, name FROM stages;`
 
 	rows, err := db.conn.Query(sqlstmt)
@@ -80,7 +80,7 @@ func (db *Database) getStages() ([]Stage, error) {
 	return stages, nil
 }
 
-func (db *Database) createStage(s Stage) error {
+func (db *Database) CreateStage(s Stage) error {
 	_, err := db.conn.Exec(`
 		INSERT INTO stages(week, day, name)
 		VALUES (?, ?, ?);
@@ -94,7 +94,7 @@ func (db *Database) createStage(s Stage) error {
 	return err
 }
 
-func (db *Database) getStage(id int) (Stage, error) {
+func (db *Database) GetStage(id int) (Stage, error) {
 	row := db.conn.QueryRow(`
 	SELECT id, week, day, name
 	FROM stages
@@ -112,7 +112,7 @@ func (db *Database) getStage(id int) (Stage, error) {
 		log.Fatal(err)
 	}
 
-	cycles, err := db.getCyclesByStageID(stage.ID)
+	cycles, err := db.GetCyclesByStageID(stage.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func (db *Database) getStage(id int) (Stage, error) {
 	return stage, err
 }
 
-func (db *Database) completeStage(c Completion) error {
+func (db *Database) CompleteStage(c Completion) error {
 	_, err := db.conn.Exec(`
 	INSERT INTO run_completions(user_id, stage_id, photo_url, points_earned)
 	VALUES (?, ?, ?, ?);`,
@@ -138,7 +138,7 @@ func (db *Database) completeStage(c Completion) error {
 	return err
 }
 
-func (db *Database) getCompletedStages() ([]Stage, error) {
+func (db *Database) GetCompletedStages() ([]Stage, error) {
 	rows, err := db.conn.Query(`
 	SELECT DISTINCT
 	    stages.id,
@@ -172,7 +172,7 @@ func (db *Database) getCompletedStages() ([]Stage, error) {
 	return stages, nil
 }
 
-func (db *Database) getCyclesByStageID(id int) ([]StageCycle, error) {
+func (db *Database) GetCyclesByStageID(id int) ([]StageCycle, error) {
 	rows, err := db.conn.Query(`
 	SELECT
 		id,
