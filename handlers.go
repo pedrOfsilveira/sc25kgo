@@ -49,3 +49,42 @@ func (app *App) GetStageHandler(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, http.StatusOK, stage)
 }
+
+func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
+	stageIDParam := chi.URLParam(r, "id")
+
+	stageID, err := strconv.Atoi(stageIDParam)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid stage id")
+		return
+	}
+
+	stage, err := app.DB.GetStage(stageID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to get stage")
+		return
+	}
+
+	userID := 1
+	photoURL := "path/to/file"
+	pointsEarned := 100
+
+	completion, err := NewCompletion(userID, stage.ID, pointsEarned, photoURL)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err = app.DB.CompleteStage(completion)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to complete stage")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]any{
+		"message":      "stage completed",
+		"stage":        stage,
+		"pointsEarned": pointsEarned,
+		"photoURL":     photoURL,
+	})
+}
