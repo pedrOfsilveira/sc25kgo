@@ -41,5 +41,14 @@ type Completion struct {
 	UserID       int
 	StageID      int
 	PhotoURL     string
-	PointsEarned string
+	PointsEarned int
+}
+
+func newCompletion(userID, stageID, pointsEarned int, photoURL string) (Completion, error) {
+	return Completion{
+		UserID:       userID,
+		StageID:      stageID,
+		PointsEarned: pointsEarned,
+		PhotoURL:     photoURL,
+	}, nil
 }

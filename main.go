@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	conn, err := sql.Open("sqlite3", "./sc25k")
+	conn, err := sql.Open("sqlite3", "./sc25k.db")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,4 +43,23 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 	// log.Println(stage)
+
+	// completion, err := newCompletion(1, 1, 100, "path/to/file")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// err = db.completeStage(completion)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// log.Println(completion)
+
+	// completedStages, err := db.getCompletedStages()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// log.Println(completedStages)
 }

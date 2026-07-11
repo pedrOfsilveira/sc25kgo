@@ -114,3 +114,53 @@ func (db *Database) getStage(id int) (Stage, error) {
 
 	return stage, err
 }
+
+func (db *Database) completeStage(c Completion) error {
+	_, err := db.conn.Exec(`
+	INSERT INTO run_completions(user_id, stage_id, photo_url, points_earned)
+	VALUES (?, ?, ?, ?)`,
+		c.UserID,
+		c.StageID,
+		c.PhotoURL,
+		c.PointsEarned,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return err
+}
+
+func (db *Database) getCompletedStages() ([]Stage, error) {
+	rows, err := db.conn.Query(`
+	SELECT DISTINCT
+	    stages.id,
+	    stages.week,
+	    stages.day,
+	    stages.name
+    FROM stages
+    JOIN run_completions
+    ON run_completions.stage_id = stages.id;`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var stages []Stage
+	for rows.Next() {
+		var stage Stage
+
+		rows.Scan(
+			&stage.ID,
+			&stage.Week,
+			&stage.Day,
+			&stage.Name,
+		)
+
+		stages = append(stages, stage)
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return stages, nil
+}
