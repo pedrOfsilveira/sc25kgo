@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -59,6 +60,21 @@ func (app *App) GetStageHandler(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, stage)
 }
 
+type completeStageRequest struct {
+	UserID   int    `json:"userId"`
+	PhotoURL string `json:"photoUrl"`
+}
+
+func calculateCompletionPoints(stage Stage) int {
+	const basePoints = 100
+	points := basePoints
+
+	points += stage.Week * 10 // 10 points per week
+	points += stage.Day * 5   // 5 points per day
+
+	return points
+}
+
 func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 	stageID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil || stageID <= 0 {
@@ -77,19 +93,63 @@ func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := 1                //TODO: MAKE IT DYNAMIC, GET FROM JWT OR SESSION
-	photoURL := "path/to/file" //TODO: MAKE IT DYNAMIC, GET FROM FILE UPLOAD
-	pointsEarned := 100        //TODO: MAKE IT DYNAMIC, CALCULATE BASED ON STAGE AND USER PERFORMANCE
+	r.Body = http.MaxBytesReader(w, r.Body, 4*1024)
 
-	completion, err := NewCompletion(userID, stage.ID, pointsEarned, photoURL)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to create completion")
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	var req completeStageRequest
+	if err := decoder.Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	err = app.DB.CompleteStage(completion)
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		respondError(w, http.StatusBadRequest, "request body must only contain a single JSON object")
+		return
+	}
+
+	if req.UserID < 0 {
+		respondError(w, http.StatusBadRequest, "userId must be positive")
+		return
+	}
+
+	if len(req.PhotoURL > 2048) {
+		respondError(w, http.StatusBadRequest, "photoUrl is too long")
+		return
+	}
+
+	_, err = app.DB.GetUser(req.UserID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		respondError(w, http.StatusNotFound, "user not found")
+		return
+	case err != nil:
+		log.Printf("get user %d: %v", req.UserID, err)
+		respondError(w, http.StatusInternalServerError, "failed to get user")
+		return
+	}
+
+	pointsEarned := calculateCompletionPoints(stage)
+
+	completion, err := NewCompletion(req.UserID, stage.ID, pointsEarned, req.PhotoURL)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to complete stage")
+		respondError(w, http.StatusBadRequest, "failed to create completion")
+		return
+	}
+
+	if err := app.DB.CompleteStage(completion); err != nil {
+		log.Printf(
+			"complete stage %d for user %d: %v",
+			stage.ID,
+			req.UserID,
+			err,
+		)
+		respondError(
+			w,
+			http.StatusInternalServerError,
+			"failed to complete stage",
+		)
 		return
 	}
 
@@ -97,7 +157,7 @@ func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 		"message":      "stage completed",
 		"stage":        stage,
 		"pointsEarned": pointsEarned,
-		"photoUrl":     photoURL,
+		"photoUrl":     req.PhotoURL,
 	})
 }
 
