@@ -16,7 +16,7 @@ func (app *App) Routes() http.Handler {
 	r.Get("/api/stages/completed", app.GetCompletedStagesHandler)
 
 	r.Get("/api/users", app.GetUsersHandler)
-	r.Get("/api/usser/{id}", app.GetUserHandler)
+	r.Get("/api/user/{id}", app.GetUserHandler)
 
 	return r
 }

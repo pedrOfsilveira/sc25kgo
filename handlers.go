@@ -1,7 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -34,16 +37,22 @@ func (app *App) GetStagesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetStageHandler(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "invalid id")
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+
+	if err != nil || id <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid stage id")
 		return
 	}
 
 	stage, err := app.DB.GetStage(id)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to get stages")
+
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		respondError(w, http.StatusNotFound, "stage not found")
+		return
+	case err != nil:
+		log.Printf("get stage %d: %v", id, err)
+		respondError(w, http.StatusInternalServerError, "failed to get stage")
 		return
 	}
 
@@ -54,7 +63,7 @@ func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 	stageIDParam := chi.URLParam(r, "id")
 
 	stageID, err := strconv.Atoi(stageIDParam)
-	if err != nil {
+	if err != nil || stageID <= 0 {
 		respondError(w, http.StatusBadRequest, "invalid stage id")
 		return
 	}
