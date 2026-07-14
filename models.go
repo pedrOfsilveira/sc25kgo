@@ -11,9 +11,9 @@ type Database struct {
 }
 
 type User struct {
-	ID     int
-	Name   string
-	Points int
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Points int    `json:"points"`
 }
 
 func NewUser(name string) (User, error) {
@@ -24,11 +24,18 @@ func NewUser(name string) (User, error) {
 }
 
 type Stage struct {
-	ID     int
-	Week   int
-	Day    int
-	Name   string
-	Cycles []StageCycle
+	ID     int          `json:"id"`
+	Week   int          `json:"week"`
+	Day    int          `json:"day"`
+	Name   string       `json:"name"`
+	Cycles []StageCycle `json:"cycles"`
+}
+
+type StageSummary struct {
+	ID   int    `json:"id"`
+	Week int    `json:"week"`
+	Day  int    `json:"day"`
+	Name string `json:"name"`
 }
 
 func NewStage(week, day int, name string) (Stage, error) {
@@ -40,11 +47,11 @@ func NewStage(week, day int, name string) (Stage, error) {
 }
 
 type StageCycle struct {
-	ID         int
-	StageID    int
-	Type       string
-	Duration   int
-	CycleOrder int
+	ID         int    `json:"id"`
+	StageID    int    `json:"stageId"`
+	Type       string `json:"type"`
+	Duration   int    `json:"duration"`
+	CycleOrder int    `json:"cycleOrder"`
 }
 
 func NewStageCycle(stageID int, cycleType string, duration, cycleOrder int) (StageCycle, error) {
@@ -57,11 +64,11 @@ func NewStageCycle(stageID int, cycleType string, duration, cycleOrder int) (Sta
 }
 
 type Completion struct {
-	ID           int
-	UserID       int
-	StageID      int
-	PhotoURL     string
-	PointsEarned int
+	ID           int    `json:"id"`
+	UserID       int    `json:"userId"`
+	StageID      int    `json:"stageId"`
+	PhotoURL     string `json:"photoUrl"`
+	PointsEarned int    `json:"pointsEarned"`
 }
 
 func NewCompletion(userID, stageID, pointsEarned int, photoURL string) (Completion, error) {

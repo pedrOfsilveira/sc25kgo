@@ -32,8 +32,8 @@ are not user-scoped; and the user detail route is misspelled.
 ## Next: make the core reliable
 
 - [x] Fix `/api/usser/{id}` to `/api/users/{id}`.
-- [ ] Return `400` for invalid input, `404` for missing records, and consistent JSON errors for server failures.
-- [ ] Add JSON field names to API models and return empty arrays as `[]`, not `null`.
+- [x] Return `400` for invalid input, `404` for missing records, and consistent JSON errors for server failures.
+- [x] Add JSON field names to API models and return empty arrays as `[]`, not `null`.
 - [ ] Remove hard-coded completion values; decode and validate request data.
 - [ ] Make stage completion transactional and calculate rewards on the server.
 - [ ] Scope completion history and progress to the active user.

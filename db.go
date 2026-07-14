@@ -45,7 +45,7 @@ func (db *Database) CreateTables() error {
 	return err
 }
 
-func (db *Database) GetStages() ([]Stage, error) {
+func (db *Database) GetStages() ([]StageSummary, error) {
 	sqlstmt := `SELECT id, week, day, name FROM stages;`
 
 	rows, err := db.conn.Query(sqlstmt)
@@ -54,9 +54,10 @@ func (db *Database) GetStages() ([]Stage, error) {
 	}
 	defer rows.Close()
 
-	var stages []Stage
+	stages := make([]StageSummary, 0)
+
 	for rows.Next() {
-		var stage Stage
+		var stage StageSummary
 
 		err := rows.Scan(
 			&stage.ID,
@@ -127,7 +128,7 @@ func (db *Database) CompleteStage(c Completion) error {
 	return err
 }
 
-func (db *Database) GetCompletedStages() ([]Stage, error) {
+func (db *Database) GetCompletedStages() ([]StageSummary, error) {
 	rows, err := db.conn.Query(`
 	SELECT DISTINCT
 	    stages.id,
@@ -142,9 +143,10 @@ func (db *Database) GetCompletedStages() ([]Stage, error) {
 	}
 	defer rows.Close()
 
-	var stages []Stage
+	stages := make([]StageSummary, 0)
+
 	for rows.Next() {
-		var stage Stage
+		var stage StageSummary
 
 		err := rows.Scan(
 			&stage.ID,
@@ -180,7 +182,8 @@ func (db *Database) GetCyclesByStageID(id int) ([]StageCycle, error) {
 	}
 	defer rows.Close()
 
-	var cycles []StageCycle
+	cycles := make([]StageCycle, 0)
+
 	for rows.Next() {
 		var cycle StageCycle
 
@@ -219,7 +222,7 @@ func (db *Database) GetUsers() ([]User, error) {
 	}
 	defer rows.Close()
 
-	var users []User
+	users := make([]User, 0)
 
 	for rows.Next() {
 		var user User

@@ -60,27 +60,30 @@ func (app *App) GetStageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
-	stageIDParam := chi.URLParam(r, "id")
-
-	stageID, err := strconv.Atoi(stageIDParam)
+	stageID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil || stageID <= 0 {
 		respondError(w, http.StatusBadRequest, "invalid stage id")
 		return
 	}
 
 	stage, err := app.DB.GetStage(stageID)
-	if err != nil {
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		respondError(w, http.StatusNotFound, "stage not found")
+		return
+	case err != nil:
+		log.Printf("get stage %d: %v", stageID, err)
 		respondError(w, http.StatusInternalServerError, "failed to get stage")
 		return
 	}
 
-	userID := 1
-	photoURL := "path/to/file"
-	pointsEarned := 100
+	userID := 1                //TODO: MAKE IT DYNAMIC, GET FROM JWT OR SESSION
+	photoURL := "path/to/file" //TODO: MAKE IT DYNAMIC, GET FROM FILE UPLOAD
+	pointsEarned := 100        //TODO: MAKE IT DYNAMIC, CALCULATE BASED ON STAGE AND USER PERFORMANCE
 
 	completion, err := NewCompletion(userID, stage.ID, pointsEarned, photoURL)
 	if err != nil {
-		respondError(w, http.StatusBadRequest, err.Error())
+		respondError(w, http.StatusInternalServerError, "failed to create completion")
 		return
 	}
 
@@ -94,7 +97,7 @@ func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 		"message":      "stage completed",
 		"stage":        stage,
 		"pointsEarned": pointsEarned,
-		"photoURL":     photoURL,
+		"photoUrl":     photoURL,
 	})
 }
 
@@ -117,15 +120,19 @@ func (app *App) GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "invalid id")
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil || id <= 0 {
+		respondError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 
 	user, err := app.DB.GetUser(id)
-	if err != nil {
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		respondError(w, http.StatusNotFound, "user not found")
+		return
+	case err != nil:
+		log.Printf("get user %d: %v", id, err)
 		respondError(w, http.StatusInternalServerError, "failed to get user")
 		return
 	}
