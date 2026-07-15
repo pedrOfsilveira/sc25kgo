@@ -37,7 +37,7 @@ are not user-scoped; and the user detail route is misspelled.
 - [x] Remove hard-coded completion values; decode and validate request data.
 - [x] Make stage completion transactional and calculate rewards on the server.
 - [x] Scope completion history and progress to the active user.
-- [ ] Enable SQLite foreign keys and add uniqueness/order constraints.
+- [x] Enable SQLite foreign keys and add uniqueness/order constraints.
 - [ ] Replace the checked-in development database with repeatable schema migrations and idempotent seed data.
 - [ ] Add graceful shutdown, server timeouts, and environment-based address/database configuration.
 

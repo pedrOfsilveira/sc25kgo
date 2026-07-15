@@ -9,11 +9,27 @@ import (
 )
 
 func main() {
-	conn, err := sql.Open("sqlite3", "./sc25k.db")
+	conn, err := sql.Open("sqlite3", "file:sc25k.db?_foreign_keys=on")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+
+	if err := conn.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
+	var foreignKeysEnabled bool
+
+	if err := conn.QueryRow(
+		"PRAGMA foreign_keys;",
+	).Scan(&foreignKeysEnabled); err != nil {
+		log.Fatal(err)
+	}
+
+	if !foreignKeysEnabled {
+		log.Fatal("SQLite foreign keys are disabled")
+	}
 
 	db := &Database{
 		conn: conn,

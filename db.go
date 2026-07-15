@@ -11,44 +11,77 @@ import (
 func (db *Database) CreateTables() error {
 	sqlstmt := `
 	CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT NOT NULL,
-			points INTEGER NOT NULL DEFAULT 0,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL
+			CHECK (length(trim(name)) > 0),
+		points INTEGER NOT NULL DEFAULT 0
+			CHECK (points >= 0),
+		created_at DATETIME NOT NULL
+			DEFAULT CURRENT_TIMESTAMP
+	);
 
-		CREATE TABLE IF NOT EXISTS stages (
+	CREATE TABLE IF NOT EXISTS stages (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			week INTEGER NOT NULL,
-			day INTEGER NOT NULL,
+			week INTEGER NOT NULL
+				CHECK (week BETWEEN 1 AND 9),
+			day INTEGER NOT NULL
+				CHECK (day BETWEEN 1 AND 3),
 			name TEXT NOT NULL
-		);
+				CHECK (length(trim(name)) > 0),
 
-		CREATE TABLE IF NOT EXISTS stage_cycles (
+			UNIQUE (week, day)
+	);
+
+	CREATE TABLE IF NOT EXISTS stage_cycles (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			stage_id INTEGER NOT NULL,
-			type TEXT NOT NULL,
-			duration INTEGER NOT NULL,
-			cycle_order INTEGER NOT NULL,
-			FOREIGN KEY(stage_id) REFERENCES stages(id)
-		);
+			type TEXT NOT NULL
+				CHECK (
+					type IN ('warmup', 'walk', 'run', 'cooldown')
+				),
+			duration INTEGER NOT NULL
+				CHECK (duration > 0),
+			cycle_order INTEGER NOT NULL
+				CHECK (cycle_order > 0),
 
-		CREATE TABLE IF NOT EXISTS run_completions (
+			FOREIGN KEY (stage_id)
+				REFERENCES stages(id),
+
+			UNIQUE (stage_id, cycle_order)
+	);
+
+	CREATE TABLE IF NOT EXISTS run_completions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL,
 			stage_id INTEGER NOT NULL,
-			photo_url TEXT NOT NULL,
-			points_earned INTEGER NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY(user_id) REFERENCES users(id),
-			FOREIGN KEY(stage_id) REFERENCES stages(id)
-		);
+			photo_url TEXT NOT NULL DEFAULT '',
+			points_earned INTEGER NOT NULL
+				CHECK (points_earned >= 0),
+			created_at DATETIME NOT NULL
+				DEFAULT CURRENT_TIMESTAMP,
 
-		INSERT INTO users (name, points)
-		SELECT 'Runner', 0
-		WHERE NOT EXISTS (
+			FOREIGN KEY (user_id)
+				REFERENCES users(id),
+
+			FOREIGN KEY (stage_id)
+				REFERENCES stages(id)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_run_completions_user_stage
+	ON run_completions (user_id, stage_id);
+
+	CREATE INDEX IF NOT EXISTS idx_run_completions_user_created
+	ON run_completions (
+			user_id,
+			created_at DESC,
+			id DESC
+	);
+
+	INSERT INTO users (name, points)
+	SELECT 'Runner', 0
+	WHERE NOT EXISTS (
 			SELECT 1 FROM users
-		);
+	);
 `
 
 	_, err := db.conn.Exec(sqlstmt)
