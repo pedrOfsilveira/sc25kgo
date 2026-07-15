@@ -65,12 +65,16 @@ type completeStageRequest struct {
 	PhotoURL string `json:"photoUrl"`
 }
 
-func calculateCompletionPoints(stage Stage) int {
+func calculateCompletionPoints(stage Stage, isRepeat bool) int {
 	const basePoints = 100
-	points := basePoints
 
+	points := basePoints
 	points += stage.Week * 10 // 10 points per week
 	points += stage.Day * 5   // 5 points per day
+
+	if isRepeat {
+		points /= 2
+	}
 
 	return points
 }
@@ -109,55 +113,37 @@ func (app *App) CompleteStageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.UserID < 0 {
+	if req.UserID <= 0 {
 		respondError(w, http.StatusBadRequest, "userId must be positive")
 		return
 	}
 
-	if len(req.PhotoURL > 2048) {
+	if len(req.PhotoURL) > 2048 {
 		respondError(w, http.StatusBadRequest, "photoUrl is too long")
 		return
 	}
 
-	_, err = app.DB.GetUser(req.UserID)
+	completion, err := app.DB.CompleteStage(
+		r.Context(),
+		req.UserID,
+		stage,
+		req.PhotoURL,
+	)
+
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		respondError(w, http.StatusNotFound, "user not found")
 		return
 	case err != nil:
-		log.Printf("get user %d: %v", req.UserID, err)
-		respondError(w, http.StatusInternalServerError, "failed to get user")
+		log.Printf("complete stage %d for user %d: %v", stageID, req.UserID, err)
+		respondError(w, http.StatusInternalServerError, "failed to complete stage")
 		return
 	}
 
-	pointsEarned := calculateCompletionPoints(stage)
-
-	completion, err := NewCompletion(req.UserID, stage.ID, pointsEarned, req.PhotoURL)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "failed to create completion")
-		return
-	}
-
-	if err := app.DB.CompleteStage(completion); err != nil {
-		log.Printf(
-			"complete stage %d for user %d: %v",
-			stage.ID,
-			req.UserID,
-			err,
-		)
-		respondError(
-			w,
-			http.StatusInternalServerError,
-			"failed to complete stage",
-		)
-		return
-	}
-
-	respondJSON(w, http.StatusOK, map[string]any{
-		"message":      "stage completed",
-		"stage":        stage,
-		"pointsEarned": pointsEarned,
-		"photoUrl":     req.PhotoURL,
+	respondJSON(w, http.StatusCreated, map[string]any{
+		"message":    "stage completed",
+		"stage":      stage,
+		"completion": completion,
 	})
 }
 

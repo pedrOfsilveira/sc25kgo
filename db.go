@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"database/sql"
+	"fmt"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -116,16 +120,75 @@ func (db *Database) GetStage(id int) (Stage, error) {
 	return stage, nil
 }
 
-func (db *Database) CompleteStage(c Completion) error {
-	_, err := db.conn.Exec(`
-	INSERT INTO run_completions(user_id, stage_id, photo_url, points_earned)
-	VALUES (?, ?, ?, ?);`,
-		c.UserID,
-		c.StageID,
-		c.PhotoURL,
-		c.PointsEarned,
-	)
-	return err
+func (db *Database) CompleteStage(ctx context.Context, userID int, stage Stage, photoURL string) (Completion, error) {
+	tx, err := db.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return Completion{}, fmt.Errorf("begin completion transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	var isRepeat bool
+
+	err = tx.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM run_completions
+			WHERE user_id = ? AND stage_id = ?
+		);
+	`, userID, stage.ID).Scan(&isRepeat)
+
+	if err != nil {
+		return Completion{}, fmt.Errorf("check if stage is repeat: %w", err)
+	}
+
+	pointsEarned := calculateCompletionPoints(stage, isRepeat)
+
+	result, err := tx.ExecContext(ctx, `
+		INSERT INTO run_completions (
+		user_id,
+		stage_id,
+		photo_url,
+		points_earned)
+		VALUES (?, ?, ?, ?);`, userID, stage.ID, photoURL, pointsEarned)
+
+	if err != nil {
+		return Completion{}, fmt.Errorf("insert completion: %w", err)
+	}
+
+	completionID, err := result.LastInsertId()
+	if err != nil {
+		return Completion{}, fmt.Errorf("get completion id: %w", err)
+	}
+
+	result, err = tx.ExecContext(ctx, `
+		UPDATE users
+		SET points = points + ?
+		WHERE id = ?;`, pointsEarned, userID)
+
+	if err != nil {
+		return Completion{}, fmt.Errorf("update user points: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return Completion{}, fmt.Errorf("check updated user: %w", err)
+	}
+
+	if rowsAffected != 1 {
+		return Completion{}, fmt.Errorf("update user points: %w", sql.ErrNoRows)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Completion{}, fmt.Errorf("commit completion transaction: %w", err)
+	}
+
+	return Completion{
+		ID:           int(completionID),
+		UserID:       userID,
+		StageID:      stage.ID,
+		PhotoURL:     photoURL,
+		PointsEarned: pointsEarned,
+	}, nil
 }
 
 func (db *Database) GetCompletedStages() ([]StageSummary, error) {

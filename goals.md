@@ -35,7 +35,7 @@ are not user-scoped; and the user detail route is misspelled.
 - [x] Return `400` for invalid input, `404` for missing records, and consistent JSON errors for server failures.
 - [x] Add JSON field names to API models and return empty arrays as `[]`, not `null`.
 - [x] Remove hard-coded completion values; decode and validate request data.
-- [ ] Make stage completion transactional and calculate rewards on the server.
+- [x] Make stage completion transactional and calculate rewards on the server.
 - [ ] Scope completion history and progress to the active user.
 - [ ] Enable SQLite foreign keys and add uniqueness/order constraints.
 - [ ] Replace the checked-in development database with repeatable schema migrations and idempotent seed data.
