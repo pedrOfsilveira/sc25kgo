@@ -43,7 +43,13 @@ func (db *Database) CreateTables() error {
 			FOREIGN KEY(user_id) REFERENCES users(id),
 			FOREIGN KEY(stage_id) REFERENCES stages(id)
 		);
-	`
+
+		INSERT INTO users (name, points)
+		SELECT 'Runner', 0
+		WHERE NOT EXISTS (
+			SELECT 1 FROM users
+		);
+`
 
 	_, err := db.conn.Exec(sqlstmt)
 	return err
@@ -191,16 +197,66 @@ func (db *Database) CompleteStage(ctx context.Context, userID int, stage Stage, 
 	}, nil
 }
 
-func (db *Database) GetCompletedStages() ([]StageSummary, error) {
+func (db *Database) GetRunHistory(userID int) ([]RunHistoryEntry, error) {
 	rows, err := db.conn.Query(`
-	SELECT DISTINCT
-	    stages.id,
-	    stages.week,
-	    stages.day,
-	    stages.name
-    FROM stages
-    JOIN run_completions
-    ON run_completions.stage_id = stages.id;`)
+		SELECT
+			run_completions.id,
+			stages.id,
+			stages.week,
+			stages.day,
+			stages.name,
+			run_completions.points_earned,
+			run_completions.photo_url,
+			run_completions.created_at
+		FROM run_completions
+		JOIN stages ON stages.id = run_completions.stage_id
+		WHERE run_completions.user_id = ?
+		ORDER BY run_completions.created_at DESC, run_completions.id DESC;`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	runs := make([]RunHistoryEntry, 0)
+
+	for rows.Next() {
+		var run RunHistoryEntry
+		if err := rows.Scan(
+			&run.CompletionID,
+			&run.Stage.ID,
+			&run.Stage.Week,
+			&run.Stage.Day,
+			&run.Stage.Name,
+			&run.PointsEarned,
+			&run.PhotoURL,
+			&run.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		runs = append(runs, run)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return runs, nil
+}
+
+func (db *Database) GetCompletedStages(userID int) ([]StageSummary, error) {
+	rows, err := db.conn.Query(
+		`SELECT DISTINCT
+		stages.id,
+		stages.week,
+		stages.day,
+		stages.name
+	FROM stages
+	JOIN run_completions
+		ON run_completions.stage_id = stages.id
+	WHERE run_completions.user_id = ?
+	ORDER BY stages.week, stages.day;`, userID)
+
 	if err != nil {
 		return nil, err
 	}
@@ -211,21 +267,22 @@ func (db *Database) GetCompletedStages() ([]StageSummary, error) {
 	for rows.Next() {
 		var stage StageSummary
 
-		err := rows.Scan(
+		if err := rows.Scan(
 			&stage.ID,
 			&stage.Week,
 			&stage.Day,
 			&stage.Name,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
 
 		stages = append(stages, stage)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return stages, nil
 }
 
@@ -306,6 +363,21 @@ func (db *Database) GetUsers() ([]User, error) {
 	return users, nil
 }
 
+func (db *Database) GetActiveUser() (User, error) {
+	row := db.conn.QueryRow(`
+		SELECT id, name, points
+		FROM users
+		ORDER BY id
+		LIMIT 1;`)
+
+	var user User
+	if err := row.Scan(&user.ID, &user.Name, &user.Points); err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
+
 func (db *Database) GetUser(id int) (User, error) {
 	row := db.conn.QueryRow(`
 	SELECT id, name, points
@@ -323,4 +395,49 @@ func (db *Database) GetUser(id int) (User, error) {
 		return User{}, err
 	}
 	return user, nil
+}
+
+func (db *Database) GetCompletedStageCount(userID int) (int, error) {
+	var count int
+
+	err := db.conn.QueryRow(
+		`SELECT COUNT(DISTINCT stage_id)
+				FROM run_completions
+				WHERE user_id = ?;
+			`, userID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (db *Database) GetTotalStageCount() (int, error) {
+	var count int
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM stages;`).Scan(&count); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (db *Database) GetNextStage(userID int) (StageSummary, error) {
+	row := db.conn.QueryRow(`
+		SELECT stages.id, stages.week, stages.day, stages.name
+		FROM stages
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM run_completions
+			WHERE run_completions.user_id = ?
+				AND run_completions.stage_id = stages.id
+		)
+		ORDER BY stages.week, stages.day, stages.id
+		LIMIT 1;`, userID)
+
+	var stage StageSummary
+	if err := row.Scan(&stage.ID, &stage.Week, &stage.Day, &stage.Name); err != nil {
+		return StageSummary{}, err
+	}
+
+	return stage, nil
 }

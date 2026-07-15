@@ -1,6 +1,9 @@
 package main
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 type App struct {
 	DB *Database
@@ -69,6 +72,21 @@ type Completion struct {
 	StageID      int    `json:"stageId"`
 	PhotoURL     string `json:"photoUrl"`
 	PointsEarned int    `json:"pointsEarned"`
+}
+
+type RunHistoryEntry struct {
+	CompletionID int          `json:"completionId"`
+	Stage        StageSummary `json:"stage"`
+	PointsEarned int          `json:"pointsEarned"`
+	PhotoURL     string       `json:"photoUrl"`
+	CreatedAt    time.Time    `json:"createdAt"`
+}
+
+type ProgressResponse struct {
+	User                User          `json:"user"`
+	CompletedStageCount int           `json:"completedStageCount"`
+	TotalStageCount     int           `json:"totalStageCount"`
+	NextStage           *StageSummary `json:"nextStage"`
 }
 
 func NewCompletion(userID, stageID, pointsEarned int, photoURL string) (Completion, error) {
